@@ -1,0 +1,389 @@
+---
+title: "Untitled"
+author: "Batista Reda"
+date: "13/12/2021"
+output: pdf_document
+---
+```{r}
+library(SciViews)   
+library(corrplot)   
+library(Ryacas)
+library("FactoMineR") 
+library("factoextra") 
+require(graphics)
+library(ggplot2)
+library(functional) 
+library(expm)
+```
+
+## Exercice 1 
+```{r} 
+diag_suite<-function(n){
+
+  A <- rbind(c(1, 0, 2), c(0, -1, 0), c(2, 0, 1))
+  P <- eigen(A)$vectors
+  D <- diag(round(eigen(A)$values))
+  P_1 <- solve(eigen(A)$vectors)
+  x0 <- c(1, 2, 3)
+  Xn <- P %*% D%^%n %*% P_1 %*% x0
+  un <- Xn[1]
+  vn <- Xn[2]
+  wn <- Xn[3]
+  return(c(un,vn,wn))
+  }
+diag_suite(0)
+```
+
+
+## Exercice 2 
+### Question 1  
+```{r}
+#f (x, y) = exp(x*y) - exp(x) + 2
+#Calcul du gradient de f 
+f_expr = expression(exp(x * y) - exp(x) + 2)
+dfx     = D(f_expr, 'x')
+dfy     = D(f_expr, 'y')
+#(x=0, y=1) est un point critique parce que ???f(X0) = 0
+#Il est clair à partir du gradient que : 
+  # Quand y = 1 : dx = 0
+  # Quand y < 1 : dx < 0
+  # Quand y > 1 : dx > 0
+
+#Matrice haussienne de f
+ddx    = D(dfx, 'x')
+ddy    = D(dfy, 'y')
+
+f <- function(x, y) {exp(x * y) - exp(x) + 2}
+#Attribuer à y les valeurs 0, 1, 2
+f_given_y_zero <- Curry(f, y = 0)
+f_given_y_one <- Curry(f, y = 1)
+f_given_y_two <- Curry(f, y = 2)
+
+minimum_f = optimize(f_given_y_zero, c(0,2), maximum = FALSE)
+maximum_f = optimize(f_given_y_zero, c(0,2), maximum = TRUE)
+
+plot(f_given_y_zero, from=0, to=2, ylab = paste( "f | y = ", 0))
+plot(f_given_y_one, from=0, to=2, ylab = paste( "f | y = ", 1))
+plot(f_given_y_two, from=0, to=2, ylab = paste( "f | y = ", 2))
+```
+
+
+### Question 2 
+```{r}
+
+#g(x, y, z) = (x + z^2) * exp(y^2 + z^2 + 1)
+g_expr = expression((x + z^2) * exp(y^2 + z^2 + 1))
+dgx = D(g_expr, 'x')
+dgy = D(g_expr, 'y')
+dgz = D(g_expr, 'z')
+
+
+g <- function(x) {(x[1] + x[3]^2) * exp(x[2]^2 + x[3]^2 + 1) }
+minimum_g = optim(c(0,0,0), g)$par
+maximum_g = optim(c(0,0,0), g,control=list(fnscale=-1))$par
+```
+
+### Question 3
+
+```{r}
+h_expr = expression(log(x*y*z) - (log(x) *log(y)*log(z)))
+dhx = D(h_expr, 'x')
+dhy = D(h_expr, 'y')
+dhz = D(h_expr, 'z')
+
+h <- function(x) {log(x[1]*x[2]*x[3]) - (log(x[1]) *log(x[2])*log(x[3]))}
+minimum_h = optim(c(0.1,0.1,0.1), h)$par
+maximum_h = optim(c(0.1,0.1,0.1), h, control=list(fnscale=-1))$par
+```
+
+
+## Exercice 3 
+### Question 1  
+```{r}
+f_1 <- function(x) {
+  x[1] * x[2]
+}
+
+A_1 <- matrix(c(1,0,0,1,-1,1), 3, 2, byrow=T)
+b_1 <- c(0,0,6)
+
+maximum_f_1 = constrOptim(c(4,12), f_1, NULL, A_1, b_1,control=list(fnscale=-1))$par
+minimum_f_1 = constrOptim(c(4,12), f_1, NULL, A_1, b_1)$par
+
+f_x_1 <- seq(0,4,len=40)
+f_y_1 <- seq(0,4,len=40)
+
+gz_1 <- outer(f_x_1,f_y_1,function(x,y) {x*y})
+contour(f_x_1,f_y_1,gz_1)
+```
+
+### Question 2
+```{r}
+f_2 <- function(x) {
+  x1 <- x[1]
+  x2 <- x[2]
+  x3 <- x[3]
+  x1**2 + x2**2 + x3**2
+}
+
+A_2 <- matrix(c(1,1,1,0,0,1), 2, 3, byrow=T)
+b_2 <- c(1,-0.1)
+
+maximum_f_2 = constrOptim(c(1,1,0), f_2, NULL, A_2, b_2,control=list(fnscale=-1))$par
+minimum_f_2 = constrOptim(c(1,1,0), f_2, NULL, A_2, b_2)
+```
+
+
+
+## Exercice 4 
+
+L'objectif de cette exercice est de déterminer la moyenne et l'écart-type de la distance en mètre parcourus par un javelot. On sait que X qui définie la distance parcourus par un javelot en mètre suit une loi normale. 
+On utilise qnorm pour simuler une loi normale centrée réduite et déterminer ensuite la moyenne et l'écart-type. 
+```{r} 
+qnorm(0.9,0,1)#10% des javelots atteignent plus de 75m
+qnorm(0.25,0,1)# 25% des javelots parcourent moins de 50m
+```
+On obtient un système à deux équations 
+75-µ=1.28σ 
+25-µ=-0.67σ 
+On calcul L1-L2
+
+```{r}
+75-50 
+qnorm(0.9,0,1)-qnorm(0.25,0,1)
+```
+Ce qui nous donnes : 25=1.95σ  --> σ =12.8
+On remplace dans le système et on obtient : µ=58.7 
+La longueur moyenne parcourue par un javelot est de 58.7m et d'écart-type 12.8m  
+
+
+
+## Exercice 5  
+### Question 1
+
+```{r} 
+palindrome<-function(mot){  
+  template<-gsub("[\r\n]", "", mot)#On retire les retours chariots 
+  template_clean<-gsub(" ", "", template, fixed = TRUE)#Retire les espaces entres les mots 
+  asci_clean<-iconv(template_clean, from = '', to = 'ASCII//TRANSLIT')#Change les caractères spéciaux
+  cut_mot<-strsplit(asci_clean,split = "")#On sépare individuellement chaque lettre
+  reversed_mot<-paste(rev(cut_mot[[1]]), collapse="")#On recolle en inversant l'ordre 
+  if (asci_clean == reversed_mot) {#On compare avec l'original
+      cat(mot,"est un palindrome\n",sep=" ") 
+
+  } else {
+      cat(mot,"n'est pas un palindrome\n",sep = " ")
+  }
+} 
+```
+
+
+### Question 2 
+```{r}
+liste_mot<-list("radar","bonne année", "sept", "kayak", "la mariée ira mal", "statistiques", "engage le jeu que je le gagne", "esope reste ici et se repose")
+for(mot in liste_mot){
+  palindrome(mot)
+}
+
+```
+
+### Question 3 
+
+```{r}
+palindrome_9<-function(mot){  
+  template<-gsub("[\r\n]", "", mot)#On retire les retours chariots 
+  template_clean<-gsub(" ", "", template, fixed = TRUE)#Retire les espaces entres les mots 
+  asci_clean<-iconv(template_clean, from = '', to = 'ASCII//TRANSLIT')#Change les caractères spéciaux
+  cut_mot<-strsplit(asci_clean,split = "")#On sépare individuellement chaque lettre
+  reversed_mot<-paste(rev(cut_mot[[1]]), collapse="")#On recolle en inversant l'ordre 
+  if (asci_clean == reversed_mot & nchar(asci_clean)<=9) {#On compare avec l'original
+      cat(mot,"est un palindrome\n",sep=" ")  
+    } else { 
+      cat(mot,"n'est pas un palindrome\n",sep = " ")
+    } 
+} 
+for(mot in liste_mot){
+  palindrome_9(mot)
+}
+
+```
+
+
+## Exercice 6 
+### Question 1
+```{r}  
+f <- function(x) {x^2*ln(x)^n}
+
+for (n in c(1:10)) {  
+  results<-integrate(f, lower = 1, upper = exp(1))
+  print(results)
+  } 
+```
+### Question 2 
+
+```{r}   
+n<-1 
+n_1<-n+1
+f <- function(x) {x^2*(ln(x))^n}  
+f_n_1 <-function(x) {x^2*(ln(x))^n_1}
+results_n <- n*(integrate(f, lower = 1, upper = exp(1))$value) 
+results_n_1 <- n_1*(integrate(f, lower = 1, upper = exp(1))$value) 
+while (abs(results_n-results_n_1) > 10^-8) { #Si 10-2 alors resultats = 20  
+  n<-n+1 
+  n_1<-n_1+1  
+  results_n <- n*(integrate(f, lower = 1, upper = exp(1))$value)  
+  results_n_1 <- n_1*(integrate(f, lower = 1, upper = exp(1))$value)
+}
+print(round(results_n,2)) 
+print(n)
+```
+
+
+##Exercice 7 
+### Question 1 
+#### Data avec les deux dernières lignes en moins
+```{r}
+data<-read.csv("données.csv",header = TRUE,sep=";")#Chargement des données  
+data_2<-data[-c(19,20),]
+data_2<-data_2[-1] 
+data_cor<-cor(data_2)  
+data_cor
+```
+
+### Question 2
+```{r}
+corrplot(data_cor, method = 'color') # Heatmap de correlation  
+```
+Le plot ci-contre montre la matrice de corrélation sous forme de heatmap. Les valeurs les plus corrélées sont 1 et -1. Pour les valeurs égales à -1 la corrélation est inverse (une variable augmente l'autre diminue) pour les valeurs égales à 1 la corrélation est cojointe (les deux variables augmentes ensemble) et pour 0 les variables ne sont pas corrélés. Ici les valeurs les plus corrélées sont en rouge brique ou en bleu marine. On peut remarquer qu'un groupement de valeur sont présentes aux niveaux des variables petit c avec beaucoup de corrélation positive entre elles.
+
+### Question 3 
+
+```{r}
+res.pca <- PCA(data_2,scale.unit = TRUE, graph = FALSE) 
+fviz_eig(res.pca, addlabels = TRUE, ylim = c(0, 100))
+```
+
+Au vu des résultats, on garde les deux premières valeurs (il faut obligatoirement deux valeurs) on ne prend pas la troisième que l'on considère comme négligéable. Les deux premières dimensions représente 80% d'inertie ce qui implique que les deux premières dimensions repésentes 80% du jeux de données totale
+### Question 4   
+
+```{r}
+# Contributions des variables à PC1
+fviz_contrib(res.pca, choice = "var", axes = 1, top = 10)
+# Contributions des variables à PC2
+fviz_contrib(res.pca, choice = "var", axes = 2, top = 10) 
+#Contribution totale des variables 
+fviz_contrib(res.pca, choice = "var", axes = 1:2, top = 10)
+```
+On considère que les variables qui déterminent les composantes principales sont celle qui se trouve au dessus de la ligne en pointillé rouge. Cette ligne représente la contribution moyenne de la dimension. Toute variable au dessus est significative dans la contribution de sa dimension.
+Pour la dimension 1 on a : c1999 c2000 c2002 c1998 c2001 c2004 c2003 
+Pour la dimension 2 on a : i2001 i2003 i1999 i2002 i2000 
+
+
+### Question 5
+
+```{r}
+fviz_pca_var(res.pca, col.var = "black")
+```
+Voici le cercle des correlations et quelques informations dessus : 
+  - Les variables regroupées sont corrélées positivement 
+  - Les variables loin de l'origine sont bien représenté par l'ACP  
+  - Plus la flèche est proche de la dimension plus la variable est corrélée à la dimension représentée
+On peut observer deux groupes distincts avec un groupe plus centrée sur l'axe horizontale et le deuxième groupes beaucoup plus vers l'axe verticale. Le premier groupe est celui des petit"c" et le deuxième celui des petits "i". Le groupe des petits "c" est beaucoup plus homogène (plus rapproché et plus loin du centre) que le groupe des petits "i". Au vu de l'angle sur le cercle on peut en déduire que les deux groupes présentes une corrélation faible.
+
+
+### Question 6
+
+La première composante principale est repésenté par la variable petit "c" 
+La deuxième composante principale est représenté par la variable petit "i"
+
+### Question 7 
+```{r}
+# Contribution totale sur PC1 et PC2
+# Contributions des variables à PC1
+fviz_contrib(res.pca, choice = "ind", axes = 1, top = 10)
+# Contributions des variables à PC2
+fviz_contrib(res.pca, choice = "ind", axes = 2, top = 10) 
+#Contribution totale des variables 
+fviz_contrib(res.pca, choice = "ind", axes = 1:2, top = 10)
+```
+Tout comme le précédent graphique on utilise le même procédé avec la ligne en pointillé. 
+Cette fois les individus qui contribue aux composantes principales sont :
+Pour la dimension 1 on a : 5(Espagne) 9(Grèce) 12(Japon) 13(Luxembourg) 11(Italie)
+Pour la dimension 2 on a : 12(Japon) 10(Irlande) 16(Portugal) 15(Pays-Bas) 1(Allemagne)
+
+
+#### Data avec les deux dernières lignes    
+### Question 1 
+```{r}
+data<-read.csv("données.csv",header = TRUE,sep=";")#Chargement des données 
+data2_2<-data[-1]  
+data2_2cor<-cor(data2_2) 
+```
+
+
+### Question 2
+```{r}
+corrplot(data2_2cor, method = 'color') # Heatmap de correlation
+```
+Le plot ci-contre montre la matrice de corrélation sous forme de heatmap. Les valeurs les plus corrélées sont 1 et -1. Pour les valeurs égales à -1 la corrélation est inverse (une variable augmente l'autre diminue) pour les valeurs égales à 1 la corrélation est cojointe (les deux variables augmentes ensemble) et pour 0 les variables ne sont pas corrélés. Ici les valeurs les plus corrélées sont en rouge brique ou en bleu marine. 
+
+### Question 3 
+
+```{r}
+res.pca_2 <- PCA(data2_2, graph = FALSE) 
+eig.val_2 <- get_eigenvalue(res.pca_2) 
+fviz_eig(res.pca_2, addlabels = TRUE, ylim = c(0, 100))
+```
+
+Au vu des résultats, on garde les deux premières valeurs (il faut obligatoirement deux valeurs) on ne prend pas la troisième que l'on considère comme négligéable. 
+
+### Question 4   
+
+```{r}
+# Contributions des variables à PC1
+fviz_contrib(res.pca_2, choice = "var", axes = 1, top = 10)
+# Contributions des variables à PC2
+fviz_contrib(res.pca_2, choice = "var", axes = 2, top = 10) 
+#Contribution totale des variables 
+fviz_contrib(res.pca_2, choice = "var", axes = 1:2, top = 10)
+```
+On considère que les variables qui déterminent les composantes principales sont celle qui se trouve au dessus de la ligne en pointillé rouge. Cette ligne représente la contribution moyenne de la dimension. Toute variable au dessus est significative dans la contribution de sa dimension.
+Pour la dimension 1 on a : c1999 c2000 c2002 c2001 c1998 c2003 c2004 
+Pour la dimension 2 on a : i2001 i2003 i1999 i2002 i2000
+
+
+
+### Question 5
+
+```{r}
+fviz_pca_var(res.pca_2, col.var = "black")
+```
+
+Voici le cercle des correlations et quelques informations dessus : 
+  - les variables regroupées sont corrélées positivement 
+  - les variables loin de l'origine sont bien représenté par l'ACP  
+   - Plus la flèche est proche de la dimension plus la variable est corrélée à la dimension représentée
+On peut observer deux groupes distincts avec un groupe plus centrée sur l'axe horizontale et le deuxième groupes beaucoup plus vers l'axe verticale. Le premier groupe est celui des petit"c" et le deuxième celui des petits "i". Le groupe des petits "c" est beaucoup plus homogène (plus rapproché et plus loin du centre) que le groupe des petits "i". Au vu de l'angle sur le cercle on peut en déduire que les deux groupes présentes une corrélation faible.
+On peut observer qu'il n'y a pas eu de changement majeurs dans l'ajout des deux dernières ligne du dataset
+
+### Question 6  
+
+La première composante principale est repésenté par la variable petit "c" 
+La deuxième composante principale est représenté par la variable petit "i"
+
+### Question 7 
+```{r}
+# Contribution totale sur PC1 et PC2
+# Contributions des variables à PC1
+fviz_contrib(res.pca_2, choice = "ind", axes = 1, top = 10)
+# Contributions des variables à PC2
+fviz_contrib(res.pca_2, choice = "ind", axes = 2, top = 10) 
+#Contribution totale des variables 
+fviz_contrib(res.pca_2, choice = "ind", axes = 1:2, top = 10)
+```
+Tout comme le précédent graphique on utilise le même procédé avec la ligne en pointillé.  
+Cette fois les individus qui contribue aux composantes principales sont :
+Pour la dimension 1 on a : 5(Espagne) 9(Grèce) 12(Japon) 13(Luxembourg) 2(Autriche) 14(Norvège) 11(Italie) 15(Pays-bas)
+Pour la dimension 2 on a : 12(Japon) 10(Irlande) 16(Portugal) 15(Pays-Bas) 1(Allemagne) 
+On peut remarquer qu'il y a eu l'ajout de deux nouveaux pays
+
